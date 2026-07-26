@@ -7,7 +7,7 @@ import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# ==================== ۱. وب‌سرور برای زنده نگه داشتن سرور ====================
+# ==================== ۱. وب‌سرور برای زنده نگه داشتن سرور (UptimeRobot) ====================
 app = Flask('')
 
 
@@ -33,7 +33,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-# لینک فایل data.json روی گیت‌هاب (ریپازیتوری شما)
+# لینک فایل data.json روی گیت‌هاب
 DATA_URL = 'https://raw.githubusercontent.com/amirpooyata4985-eng/army-shadow-bot/main/data.json'
 
 
@@ -114,10 +114,10 @@ def main():
   # ۱. روشن کردن وب‌سرور Flask در پس‌زمینه
   keep_alive()
 
-  # ۲. توکن ربات (از Environment Variables یا مقدار مستقیم)
+  # ۲. توکن اختصاصی ربات ارتش سایه‌ها
   TOKEN = os.environ.get(
       'BOT_TOKEN', '8968244918:AAE3a3lD8qWkTs2YoTd-tiUVzn2wd7aytj4'
-  )  # توکن خود را در صورت نیاز چک کنید
+  )
 
   application = Application.builder().token(TOKEN).build()
 
@@ -132,4 +132,4 @@ def main():
 
 if __name__ == '__main__':
   main()
-    
+  
