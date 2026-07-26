@@ -9,11 +9,29 @@ GITHUB_RAW_URL = "https://raw.githubusercontent.com/amirpooyata4985-eng/army-sha
 HELP_TEXT = (
     "📖 **راهنمای استفاده از ربات ارتش سایه‌ها (Army of Shadows)**\n\n"
     "۱. **جستجوی مستقیم:** کافی است اسم یک کارگردان (مثلاً نولان، تارکوفسکی) یا عنوان یک فیلم/قسمت را بفرستید تا تحلیل و لینک ویدیوی آن برایتان ارسال شود.\n"
-    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» می‌توانید تمامی تحلیل‌های موجود را یکجا مطالعه کنید.\n"
+    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» یا ارسال دستور /analyze می‌توانید تمامی تحلیل‌های موجود را یکجا مطالعه کنید.\n"
     "۳. **دستورات سریع:**\n"
     "• /start — شروع مجدد ربات و مشاهده منوی اصلی\n"
+    "• /analyze — مشاهده یکجای تمام نقدها\n"
     "• /help — دریافت همین راهنما"
 )
+
+async def send_all_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """تابع عمومی برای ارسال تمامی تحلیل‌ها"""
+    all_entries = data_loader.get_all_entries()
+
+    if not all_entries:
+        target = update.message if update.message else update.callback_query.message
+        await target.reply_text("هنوز تحلیلی در دیتابیس ثبت نشده است.")
+        return
+
+    target = update.message if update.message else update.callback_query.message
+    await target.reply_text("📚 **لیست تمامی تحلیل‌های موجود در کانال ارتش سایه‌ها:**")
+    
+    for item in all_entries:
+        response_text = f"{item['title']}\n\n{item['review']}"
+        btn = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
+        await target.reply_text(response_text, reply_markup=InlineKeyboardMarkup(btn))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -31,23 +49,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT, parse_mode="Markdown")
 
+async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """پاسخ به دستور /analyze"""
+    await send_all_reviews(update, context)
+
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "show_all_reviews":
-        all_entries = data_loader.get_all_entries()
-
-        if not all_entries:
-            await query.message.reply_text("هنوز تحلیلی در دیتابیس ثبت نشده است.")
-            return
-
-        await query.message.reply_text("📚 **لیست تمامی تحلیل‌های موجود در کانال ارتش سایه‌ها:**")
-        for item in all_entries:
-            response_text = f"{item['title']}\n\n{item['review']}"
-            btn = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
-            await query.message.reply_text(response_text, reply_markup=InlineKeyboardMarkup(btn))
-
+        await send_all_reviews(update, context)
     elif query.data == "show_help":
         await query.message.reply_text(HELP_TEXT, parse_mode="Markdown")
 
@@ -68,8 +79,12 @@ if __name__ == "__main__":
         data_loader.refresh_data(github_url=GITHUB_RAW_URL, local_path="data.json")
         
         app = ApplicationBuilder().token(TOKEN).build()
+        
+        # هندلرهای دستورات
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("analyze", analyze_command))  # اضافه شدن دستور analyze
+        
         app.add_handler(CallbackQueryHandler(handle_button))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
