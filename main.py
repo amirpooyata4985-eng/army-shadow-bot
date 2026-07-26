@@ -7,14 +7,15 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 HELP_TEXT = (
     "📖 **راهنمای استفاده از ربات ارتش سایه‌ها (Army of Shadows)**\n\n"
     "۱. **جستجوی مستقیم:** کافی است اسم یک کارگردان (مثلاً نولان، تارکوفسکی) یا عنوان یک فیلم/قسمت را بفرستید تا تحلیل و لینک ویدیوی آن برایتان ارسال شود.\n"
-    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» یا ارسال دستور /analyze می‌توانید تمامی تحلیل‌های موجود را یکجا مطالعه کنید.\n"
+    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» یا ارسال دستور /analyze می‌توانید لیست موضوعات را ببینید و انتخاب کنید.\n"
     "۳. **دستورات سریع:**\n"
     "• /start — شروع مجدد ربات و مشاهده منوی اصلی\n"
-    "• /analyze — مشاهده یکجای تمام نقدها\n"
+    "• /analyze — مشاهده لیست تحلیل‌ها\n"
     "• /help — دریافت همین راهنما"
 )
 
 def load_data():
+    """خواندن اطلاعات از data.json"""
     try:
         with open("data.json", "r", encoding="utf-8") as f:
             return json.load(f)
@@ -22,7 +23,8 @@ def load_data():
         print("Error loading data.json:", e)
         return []
 
-async def send_all_reviews(update: Update):
+async def show_analysis_menu(update: Update):
+    """ایجاد منوی دکمه‌ای از گزینه‌ها و پروژه‌ها"""
     data = load_data()
     target = update.message if update.message else update.callback_query.message
 
@@ -30,11 +32,15 @@ async def send_all_reviews(update: Update):
         await target.reply_text("هنوز تحلیلی در دیتابیس ثبت نشده است.")
         return
 
-    await target.reply_text("📚 **لیست تمامی تحلیل‌های موجود در کانال ارتش سایه‌ها:**")
-    for item in data:
-        response_text = f"{item['title']}\n\n{item['review']}"
-        btn = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
-        await target.reply_text(response_text, reply_markup=InlineKeyboardMarkup(btn))
+    # ساخت دکمه شیشه‌ای برای هر تحلیل موجود در دیتابیس
+    keyboard = []
+    for index, item in enumerate(data):
+        # عنوان دکمه بر اساس عنوان ویدیو
+        button_text = item.get("title", f"تحلیل شماره {index + 1}")
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"review_{index}")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await target.reply_text("📊 **لطفاً تحلیل یا ویدیو مورد نظر خود را انتخاب کنید:**", reply_markup=reply_markup)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -51,16 +57,28 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT, parse_mode="Markdown")
 
 async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await send_all_reviews(update)
+    await show_analysis_menu(update)
 
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "show_all_reviews":
-        await send_all_reviews(update)
+        await show_analysis_menu(update)
+
     elif query.data == "show_help":
         await query.message.reply_text(HELP_TEXT, parse_mode="Markdown")
+
+    elif query.data.startswith("review_"):
+        # وقتی کاربر روی یکی از دکمه‌های منوی تحلیل کلیک می‌کند
+        index = int(query.data.split("_")[1])
+        data = load_data()
+
+        if 0 <= index < len(data):
+            item = data[index]
+            response_text = f"{item['title']}\n\n{item['review']}"
+            keyboard = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
+            await query.message.reply_text(response_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip().lower()
