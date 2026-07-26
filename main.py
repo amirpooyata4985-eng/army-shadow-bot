@@ -116,7 +116,7 @@ def main():
 
   # ۲. توکن ربات (از Environment Variables یا مقدار مستقیم)
   TOKEN = os.environ.get(
-      'BOT_TOKEN', '7898863212:AAG-x0L6A3e2O0zJq23456789abcdef'
+      'BOT_TOKEN', '8968244918:AAE3a3lD8qWkTs2YoTd-tiUVzn2wd7aytj4'
   )  # توکن خود را در صورت نیاز چک کنید
 
   application = Application.builder().token(TOKEN).build()
