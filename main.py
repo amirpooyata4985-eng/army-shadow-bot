@@ -1,5 +1,4 @@
-import json
-import os
+import json, os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -14,36 +13,27 @@ def load_data():
         return []
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "سلام! به ربات Cinema Army of Shadows خوش آمدید. 🎬\n\n"
-        "نام یک فیلم یا کارگردان (مثلاً نولان) را بفرستید تا تحلیل و ویدیوهای مرتبط را دریافت کنید."
-    )
+    await update.message.reply_text("به ربات کانال یوتیوبی ارتش سایه‌ها خوش آمدید 🎬\n\nنام یک فیلم یا کارگردان (مثلاً نولان) را بفرستید تا تحلیل و ویدیوهای مرتبط را دریافت کنید.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip().lower()
     data = load_data()
     found = False
-
     for item in data:
         keywords = [k.lower() for k in item.get("keywords", [])]
         if any(keyword in user_text for keyword in keywords):
             found = True
             response_text = f"{item['title']}\n\n{item['review']}"
             keyboard = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await update.message.reply_text(response_text, reply_markup=reply_markup)
+            await update.message.reply_text(response_text, reply_markup=InlineKeyboardMarkup(keyboard))
             break
-
     if not found:
-        await update.message.reply_text("متأسفانه تحلیلی برای این کلیدواژه پیدا نشد. کلمه دیگری را امتحان کنید!")
+        await update.message.reply_text("متأسفانه تحلیلی برای این کلیدواژه پیدا نشد.")
 
 if __name__ == "__main__":
-    if not TOKEN:
-        print("Error: TELEGRAM_BOT_TOKEN is missing!")
-    else:
+    if TOKEN:
         app = ApplicationBuilder().token(TOKEN).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        print("Bot is running...")
         app.run_polling()
+        
