@@ -6,12 +6,12 @@ TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
 HELP_TEXT = (
     "📖 **راهنمای استفاده از ربات ارتش سایه‌ها (Army of Shadows)**\n\n"
-    "۱. **جستجوی مستقیم:** کافی است اسم یک کارگردان (مثلاً نولان، تارکوفسکی) یا عنوان یک فیلم/قسمت را بفرستید تا تحلیل و لینک ویدیوی آن برایتان ارسال شود.\n"
-    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» یا ارسال دستور /analyze می‌توانید لیست موضوعات را ببینید و انتخاب کنید.\n"
+    "۱. **جستجوی مستقیم:** کافی است اسم یک کارگردان (مثلاً نولان) یا یک اثر را بفرستید تا تحلیل و لینک ویدیو ارسال شود.\n"
+    "۲. **مشاهده همه‌ی نقدها:** با زدن دکمه «لیست همه‌ی نقدها 📊» یا ارسال دستور /analyze می‌توانید لیست موضوعات را ببینید.\n"
     "۳. **دستورات سریع:**\n"
-    "• /start — شروع مجدد ربات و مشاهده منوی اصلی\n"
-    "• /analyze — مشاهده لیست تحلیل‌ها\n"
-    "• /help — دریافت همین راهنما"
+    "• /start — شروع مجدد ربات و منوی اصلی\n"
+    "• /analyze — لیست نقدها و تحلیل‌ها\n"
+    "• /help — راهنمای استفاده"
 )
 
 def load_data():
@@ -24,7 +24,7 @@ def load_data():
         return []
 
 async def show_analysis_menu(update: Update):
-    """ایجاد منوی دکمه‌ای از گزینه‌ها و پروژه‌ها"""
+    """ایجاد منوی دکمه‌ای خلاصه از پروژه‌ها"""
     data = load_data()
     target = update.message if update.message else update.callback_query.message
 
@@ -32,24 +32,22 @@ async def show_analysis_menu(update: Update):
         await target.reply_text("هنوز تحلیلی در دیتابیس ثبت نشده است.")
         return
 
-    # ساخت دکمه شیشه‌ای برای هر تحلیل موجود در دیتابیس
     keyboard = []
     for index, item in enumerate(data):
-        # عنوان دکمه بر اساس عنوان ویدیو
-        button_text = item.get("title", f"تحلیل شماره {index + 1}")
+        button_text = item.get("title", f"تحلیل {index + 1}")
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"review_{index}")])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await target.reply_text("📊 **لطفاً تحلیل یا ویدیو مورد نظر خود را انتخاب کنید:**", reply_markup=reply_markup)
+    await target.reply_text("📊 **موضوع مورد نظر خود را انتخاب کنید:**", reply_markup=reply_markup)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("لیست همه‌ی نقدها و تحلیل‌ها 📊 (Analyze)", callback_data="show_all_reviews")],
-        [InlineKeyboardButton("راهنمای استفاده 💡 (Help)", callback_data="show_help")]
+        [InlineKeyboardButton("لیست همه‌ی نقدها 📊", callback_data="show_all_reviews")],
+        [InlineKeyboardButton("راهنما 💡", callback_data="show_help")]
     ]
     await update.message.reply_text(
         "به ربات کانال یوتیوبی ارتش سایه‌ها خوش آمدید 🎬\n\n"
-        "نام یک فیلم یا کارگردان (مثلاً نولان) را بفرستید، یا از دکمه‌های زیر استفاده کنید:",
+        "نام یک اثر یا کارگردان را بفرستید، یا از دکمه‌های زیر استفاده کنید:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -70,13 +68,12 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(HELP_TEXT, parse_mode="Markdown")
 
     elif query.data.startswith("review_"):
-        # وقتی کاربر روی یکی از دکمه‌های منوی تحلیل کلیک می‌کند
         index = int(query.data.split("_")[1])
         data = load_data()
 
         if 0 <= index < len(data):
             item = data[index]
-            response_text = f"{item['title']}\n\n{item['review']}"
+            response_text = f"🎬 **{item['title']}**\n\n{item['review']}"
             keyboard = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
             await query.message.reply_text(response_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -90,7 +87,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         title = item.get("title", "").lower()
         if any(kw in user_text for kw in keywords) or user_text in title:
             found = True
-            response_text = f"{item['title']}\n\n{item['review']}"
+            response_text = f"🎬 **{item['title']}**\n\n{item['review']}"
             keyboard = [[InlineKeyboardButton("مشاهده ویدیو 🎥", url=item["video_link"])]]
             await update.message.reply_text(response_text, reply_markup=InlineKeyboardMarkup(keyboard))
             break
