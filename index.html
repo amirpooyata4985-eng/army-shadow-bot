@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ارتش سایه‌ها | تحلیل و نقد سینما</title>
+    <link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+        :root {
+            --bg-color: #0f0f12;
+            --card-bg: #18181c;
+            --accent-color: #e50914;
+            --text-color: #f1f1f1;
+            --text-muted: #a0a0a0;
+            --border-color: #2a2a30;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Vazirmatn', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.8;
+            padding-bottom: 50px;
+        }
+
+        header {
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(15,15,18,1) 100%);
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-top: 50px;
+        }
+
+        .review-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .review-card:hover {
+            transform: translateY(-3px);
+            border-color: #3f3f48;
+        }
+
+        .review-title {
+            font-size: 1.4rem;
+            color: #fff;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+            display: inline-block;
+        }
+
+        .review-text {
+            color: #d1d1d1;
+            white-space: pre-line;
+            margin-bottom: 20px;
+            font-size: 0.98rem;
+        }
+
+        .btn-youtube {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--accent-color);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .btn-youtube:hover {
+            background-color: #b80710;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎬 ارتش سایه‌ها (Army of Shadows)</h1>
+        <p>تحلیل‌های سینمایی، نقد فیلم‌ها و انیمیشن‌ها</p>
+    </header>
+
+    <div class="container" id="reviews-container">
+        <div class="loading">در حال بارگذاری آخرین تحلیل‌ها...</div>
+    </div>
+
+    <footer>
+        <p>© تمامی حقوق برای کانال ارتش سایه‌ها محفوظ است.</p>
+    </footer>
+
+    <script>
+        // آدرس اختصاصی دیتابیس شما در گیت‌هاب
+        const JSON_URL = 'https://raw.githubusercontent.com/amirpooyata4985-eng/army-shadow-bot/main/data.json';
+
+        async function fetchReviews() {
+            const container = document.getElementById('reviews-container');
+            try {
+                const response = await fetch(JSON_URL);
+                if (!response.ok) throw new Error('خطا در دریافت اطلاعات');
+                const data = await response.json();
+
+                container.innerHTML = '';
+
+                data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'review-card';
+
+                    card.innerHTML = `
+                        <h2 class="review-title">${item.title}</h2>
+                        <p class="review-text">${item.review}</p>
+                        <a href="${item.video_link}" target="_blank" class="btn-youtube">
+                            ▶ تماشا در یوتیوب
+                        </a>
+                    `;
+
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                container.innerHTML = `<div class="loading" style="color: #ff5555;">خطا در بارگذاری اطلاعات. لطفاً دوباره تلاش کنید.</div>`;
+                console.error(error);
+            }
+        }
+
+        fetchReviews();
+    </script>
+</body>
+</html>
