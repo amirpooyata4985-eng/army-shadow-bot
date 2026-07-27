@@ -13,7 +13,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ==================== ۱. وب‌سرور Flask برای UptimeRobot ====================
+# ==================== ۱. وب‌سرور برای زنده ماندن در Render ====================
 app = Flask('')
 
 
@@ -33,7 +33,7 @@ def keep_alive():
   t.start()
 
 
-# ==================== ۲. تنظیمات لاگینگ و خواندن داده ====================
+# ==================== ۲. تنظیمات لاگ و فراخوانی داده ====================
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -48,14 +48,14 @@ def load_data_sync():
     if response.status_code == 200:
       return response.json()
   except Exception as e:
-    print(f'⚠️ Error loading online data: {e}')
+    logging.error(f'Error fetching online data: {e}')
 
   if os.path.exists('data.json'):
     try:
       with open('data.json', 'r', encoding='utf-8') as f:
         return json.load(f)
     except Exception as e:
-      print(f'⚠️ Error loading local data.json: {e}')
+      logging.error(f'Error reading local data.json: {e}')
 
   return {'videos': [], 'articles': []}
 
@@ -101,9 +101,8 @@ def get_back_to_reviews_keyboard():
   return InlineKeyboardMarkup(keyboard)
 
 
-# ==================== ۴. هندلرهای تلگرام ====================
+# ==================== ۴. هندلرهای دستورات و دکمه‌ها ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-  print('--> Command /start received')
   welcome_text = (
       'سلام! به ربات رسمی کانال <b>ارتش سایه‌ها (Army of Shadows)</b> خوش'
       ' آمدید.\n\nجهت دسترسی به نقدها و ویدیوها، بخش مورد نظر را انتخاب کنید:'
@@ -115,25 +114,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
   query = update.callback_query
-  print(f'--> Button Clicked: {query.data}')  # لاگ اختصاصی برای تست در Render
-
-  try:
-    await query.answer()
-  except Exception as e:
-    print(f'Answer query error: {e}')
+  await query.answer()
 
   try:
     data = await asyncio.to_thread(load_data_sync)
     articles = data.get('articles', [])
     videos = data.get('videos', [])
 
-    # ۱. بازگشت به منوی اصلی
+    # بازگشت به منوی اصلی
     if query.data == 'main_menu':
       await query.edit_message_text(
           text='منوی اصلی ارتش سایه‌ها:', reply_markup=get_main_keyboard()
       )
 
-    # ۲. منوی لیست نقدها
+    # منوی لیست نقدها
     elif query.data == 'reviews_menu':
       text = (
           '📝 <b>بخش نقدها و تحلیل‌ها</b>\n\nلطفاً نقد مورد نظر خود را انتخاب'
@@ -143,7 +137,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           text=text, parse_mode='HTML', reply_markup=get_reviews_list_keyboard()
       )
 
-    # ۳. نقد دکوپاژ (فیلم/سایت)
+    # نقد اول: دکوپاژ (خلاصه + ویدیو + مقاله سایت)
     elif query.data == 'review_decoupage':
       item = next(
           (a for a in articles if 'دکوپاژ' in a.get('title', '')),
@@ -177,7 +171,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           disable_web_page_preview=True,
       )
 
-    # ۴. نقد آرکین و آواتار
+    # نقد دوم: آرکین و آواتار (خلاصه + ویدیو)
     elif query.data == 'review_arcane_avatar':
       item = next(
           (
@@ -212,7 +206,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           disable_web_page_preview=True,
       )
 
-    # ۵. آخرین ویدیوها
+    # آخرین ویدیوها
     elif query.data == 'latest_videos':
       text = '🎥 <b>آخرین ویدیوهای یوتیوب:</b>\n\n'
       if not videos:
@@ -238,7 +232,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
       )
 
   except Exception as e:
-    print(f'❌ Callback Error: {e}')
+    logging.error(f'Error processing callback query: {e}')
 
 
 # ==================== ۵. اجرای اصلی ====================
@@ -253,15 +247,7 @@ def main():
   application.add_handler(CommandHandler('start', start))
   application.add_handler(CallbackQueryHandler(button_callback))
 
-  print('Bot is initializing...')
-
-  # حذف Webhookهای قدیمی احتمالی برای فعال‌سازی کامل Polling
-  async def setup_bot():
-    await application.bot.delete_webhook(drop_pending_updates=True)
-    print('--> Webhook deleted successfully. Polling is ready!')
-
-  asyncio.run(setup_bot())
-
+  print('Bot starts polling cleanly...')
   application.run_polling(drop_pending_updates=True)
 
 
