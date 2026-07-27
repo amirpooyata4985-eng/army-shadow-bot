@@ -13,7 +13,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ==================== ۱. وب‌سرور برای زنده ماندن ربات در Render ====================
+# ==================== ۱. وب‌سرور زنده نگه‌داشتن (UptimeRobot) ====================
 app = Flask('')
 
 
@@ -33,7 +33,7 @@ def keep_alive():
   t.start()
 
 
-# ==================== ۲. تنظیمات و لاگینگ ====================
+# ==================== ۲. تنظیمات لاگینگ و دریافت دیتا ====================
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -42,7 +42,6 @@ logging.basicConfig(
 DATA_URL = 'https://raw.githubusercontent.com/amirpooyata4985-eng/army-shadow-bot/main/data.json'
 
 
-# تابع دریافت دیتا (بدون قفل کردن ربات)
 def load_data_sync():
   try:
     response = requests.get(DATA_URL, timeout=5)
@@ -61,7 +60,7 @@ def load_data_sync():
   return {'videos': [], 'articles': []}
 
 
-# ==================== ۳. کیبوردها و منوها ====================
+# ==================== ۳. چیدمان کیبوردها ====================
 def get_main_keyboard():
   keyboard = [
       [InlineKeyboardButton('📝 نقدها', callback_data='reviews_menu')],
@@ -77,7 +76,6 @@ def get_main_keyboard():
 
 
 def get_reviews_list_keyboard():
-  # لیست دو نقد اختصاصی کانال
   keyboard = [
       [
           InlineKeyboardButton(
@@ -106,127 +104,135 @@ def get_back_to_reviews_keyboard():
 # ==================== ۴. هندلرها ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
   welcome_text = (
-      'سلام! به ربات رسمی کانال **ارتش سایه‌ها (Army of Shadows)** خوش'
+      'سلام! به ربات رسمی کانال <b>ارتش سایه‌ها (Army of Shadows)</b> خوش'
       ' آمدید.\n\nجهت دسترسی به نقدها و ویدیوها، بخش مورد نظر را انتخاب کنید:'
   )
   await update.message.reply_text(
-      welcome_text, parse_mode='Markdown', reply_markup=get_main_keyboard()
+      welcome_text, parse_mode='HTML', reply_markup=get_main_keyboard()
   )
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
   query = update.callback_query
-  # پاسخ سریع به تلگرام برای جلوگیری از قفل شدن دکمه
   await query.answer()
 
-  # خواندن دیتا در Thread جداگانه برای حفظ سرعت ربات
-  data = await asyncio.to_thread(load_data_sync)
-  articles = data.get('articles', [])
-  videos = data.get('videos', [])
+  try:
+    data = await asyncio.to_thread(load_data_sync)
+    articles = data.get('articles', [])
+    videos = data.get('videos', [])
 
-  # ۱. بازگشت به منوی اصلی
-  if query.data == 'main_menu':
-    await query.edit_message_text(
-        text='منوی اصلی ارتش سایه‌ها:', reply_markup=get_main_keyboard()
-    )
+    # ۱. بازگشت به منوی اصلی
+    if query.data == 'main_menu':
+      await query.edit_message_text(
+          text='منوی اصلی ارتش سایه‌ها:', reply_markup=get_main_keyboard()
+      )
 
-  # ۲. ورود به لیست نقدها
-  elif query.data == 'reviews_menu':
-    text = (
-        '📝 **بخش نقدها و تحلیل‌ها**\n\nلطفاً نقد مورد نظر خود را برای مشاهده'
-        ' انتخاب کنید:'
-    )
-    await query.edit_message_text(
-        text=text,
-        parse_mode='Markdown',
-        reply_markup=get_reviews_list_keyboard(),
-    )
+    # ۲. منوی لیست نقدها
+    elif query.data == 'reviews_menu':
+      text = (
+          '📝 <b>بخش نقدها و تحلیل‌ها</b>\n\nلطفاً نقد مورد نظر خود را انتخاب'
+          ' کنید:'
+      )
+      await query.edit_message_text(
+          text=text, parse_mode='HTML', reply_markup=get_reviews_list_keyboard()
+      )
 
-  # ۳. نقد اول: دکوپاژ قسمت اول (دارای خلاصه + لینک یوتیوب + لینک سایت)
-  elif query.data == 'review_decoupage':
-    # پیدا کردن اطلاعات نقد دکوپاژ از دیتا
-    item = next(
-        (a for a in articles if 'دکوپاژ' in a.get('title', '')),
-        {
-            'title': 'دکوپاژ (قسمت اول)',
-            'summary': 'تحلیل و بررسی ساختار دکوپاژ و میزانسن در سینما.',
-            'video_link': 'https://youtube.com',
-            'link': 'https://amirpooyata4985-eng.github.io/army-shadow-bot/',
-        },
-    )
+    # ۳. نقد اول: دکوپاژ (دارای لینک یوتیوب + لینک سایت)
+    elif query.data == 'review_decoupage':
+      item = next(
+          (a for a in articles if 'دکوپاژ' in a.get('title', '')),
+          {
+              'title': 'دکوپاژ (قسمت اول)',
+              'summary': 'تحلیل و بررسی ساختار دکوپاژ و میزانسن در سینما.',
+              'video_link': 'https://youtube.com',
+              'link': (
+                  'https://amirpooyata4985-eng.github.io/army-shadow-bot/'
+              ),
+          },
+      )
 
-    text = f"🎬 **{item.get('title', 'دکوپاژ (قسمت اول)')}**\n\n"
-    text += f"📝 **خلاصه:**\n{item.get('summary', '')}\n\n"
+      title = item.get('title', 'دکوپاژ (قسمت اول)')
+      summary = item.get('summary', '')
+      video_url = item.get('video_link') or item.get('video_url', '')
+      site_url = item.get('link', '')
 
-    video_url = item.get('video_link') or item.get('video_url', '')
-    site_url = item.get('link', '')
+      text = f'🎬 <b>{title}</b>\n\n'
+      if summary:
+        text += f'📝 <b>خلاصه:</b>\n{summary}\n\n'
+      if video_url:
+        text += f'🎥 <a href="{video_url}">تماشای ویدیو در یوتیوب</a>\n'
+      if site_url:
+        text += f'🌐 <a href="{site_url}">مطالعه کامل مقاله در وب‌سایت</a>\n'
 
-    if video_url:
-      text += f'🎥 [تماشای ویدیو در یوتیوب]({video_url})\n'
-    if site_url:
-      text += f'🌐 [مطالعه کامل مقاله در وب‌سایت]({site_url})\n'
+      await query.edit_message_text(
+          text=text,
+          parse_mode='HTML',
+          reply_markup=get_back_to_reviews_keyboard(),
+          disable_web_page_preview=True,
+      )
 
-    await query.edit_message_text(
-        text=text,
-        parse_mode='Markdown',
-        reply_markup=get_back_to_reviews_keyboard(),
-        disable_web_page_preview=True,
-    )
+    # ۴. نقد دوم: آرکین و آواتار (دارای لینک یوتیوب)
+    elif query.data == 'review_arcane_avatar':
+      item = next(
+          (
+              a
+              for a in articles
+              if 'آرکین' in a.get('title', '') or 'آواتار' in a.get('title', '')
+          ),
+          {
+              'title': 'مقایسه‌ای در چهار پرده: آرکین و آواتار',
+              'summary': (
+                  'تحلیل تطبیقی جهان‌سازی، شخصیت‌پردازی و ساختار روایی دو'
+                  ' انیمیشن شاهکار آرکین و آواتار.'
+              ),
+              'video_link': 'https://youtube.com',
+          },
+      )
 
-  # ۴. نقد دوم: مقایسه آرکین و آواتار (دارای خلاصه + لینک یوتیوب)
-  elif query.data == 'review_arcane_avatar':
-    item = next(
-        (
-            a
-            for a in articles
-            if 'آرکین' in a.get('title', '') or 'آواتار' in a.get('title', '')
-        ),
-        {
-            'title': 'مقایسه‌ای در چهار پرده: آرکین و آواتار',
-            'summary': (
-                'تحلیل تطبیقی جهان‌سازی، شخصیت‌پردازی و ساختار روایی دو انیمیشن'
-                ' شاهکار آرکین و آواتار.'
-            ),
-            'video_link': 'https://youtube.com',
-        },
-    )
+      title = item.get('title', 'مقایسه‌ای در چهار پرده: آرکین و آواتار')
+      summary = item.get('summary', '')
+      video_url = item.get('video_link') or item.get('video_url', '')
 
-    text = f"🌀 **{item.get('title', 'مقایسه آرکین و آواتار')}**\n\n"
-    text += f"📝 **خلاصه:**\n{item.get('summary', '')}\n\n"
+      text = f'🌀 <b>{title}</b>\n\n'
+      if summary:
+        text += f'📝 <b>خلاصه:</b>\n{summary}\n\n'
+      if video_url:
+        text += f'🎥 <a href="{video_url}">تماشای ویدیو در یوتیوب</a>\n'
 
-    video_url = item.get('video_link') or item.get('video_url', '')
-    if video_url:
-      text += f'🎥 [تماشای ویدیو در یوتیوب]({video_url})\n'
+      await query.edit_message_text(
+          text=text,
+          parse_mode='HTML',
+          reply_markup=get_back_to_reviews_keyboard(),
+          disable_web_page_preview=True,
+      )
 
-    await query.edit_message_text(
-        text=text,
-        parse_mode='Markdown',
-        reply_markup=get_back_to_reviews_keyboard(),
-        disable_web_page_preview=True,
-    )
+    # ۵. ویدیوها
+    elif query.data == 'latest_videos':
+      text = '🎥 <b>آخرین ویدیوهای یوتیوب:</b>\n\n'
+      if not videos:
+        text += 'ویدیویی ثبت نشده است.'
+      else:
+        for v in videos:
+          v_title = v.get('title', 'ویدیو')
+          v_url = v.get('url', '')
+          text += (
+              f'🎬 <b>{v_title}</b>\n🔗 <a href="{v_url}">تماشا در'
+              ' یوتیوب</a>\n───────────────\n'
+          )
 
-  # ۵. بخش آخرین ویدیوها
-  elif query.data == 'latest_videos':
-    text = '🎥 **آخرین ویدیوهای یوتیوب:**\n\n'
-    if not videos:
-      text += 'ویدیویی ثبت نشده است.'
-    else:
-      for v in videos:
-        text += (
-            f"🎬 **{v.get('title', '')}**\n🔗"
-            f" [تماشا در یوتیوب]({v.get('url', '')})\n───────────────\n"
-        )
+      await query.edit_message_text(
+          text=text,
+          parse_mode='HTML',
+          reply_markup=InlineKeyboardMarkup([[
+              InlineKeyboardButton(
+                  '🔙 بازگشت به منوی اصلی', callback_data='main_menu'
+              )
+          ]]),
+          disable_web_page_preview=True,
+      )
 
-    await query.edit_message_text(
-        text=text,
-        parse_mode='Markdown',
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                '🔙 بازگشت به منوی اصلی', callback_data='main_menu'
-            )
-        ]]),
-        disable_web_page_preview=True,
-    )
+  except Exception as e:
+    logging.error(f'Error processing callback query: {e}')
 
 
 # ==================== ۵. اجرای اصلی ====================
@@ -241,7 +247,7 @@ def main():
   application.add_handler(CommandHandler('start', start))
   application.add_handler(CallbackQueryHandler(button_callback))
 
-  print('Bot is running with smooth Async handlers...')
+  print('Bot is running with HTML parsing format...')
   application.run_polling(drop_pending_updates=True)
 
 
