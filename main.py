@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import threading
-from flask import Flask
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -13,27 +11,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ==================== ۱. وب‌سرور برای زنده ماندن در Render ====================
-app = Flask('')
-
-
-@app.route('/')
-def home():
-  return 'Army of Shadows Bot is Live!'
-
-
-def run_flask():
-  port = int(os.environ.get('PORT', 8080))
-  app.run(host='0.0.0.0', port=port)
-
-
-def keep_alive():
-  t = threading.Thread(target=run_flask)
-  t.daemon = True
-  t.start()
-
-
-# ==================== ۲. تنظیمات لاگ و فراخوانی داده ====================
+# ==================== ۱. تنظیمات لاگینگ ====================
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -42,6 +20,7 @@ logging.basicConfig(
 DATA_URL = 'https://raw.githubusercontent.com/amirpooyata4985-eng/army-shadow-bot/main/data.json'
 
 
+# ==================== ۲. فراخوانی داده‌ها ====================
 def load_data_sync():
   try:
     response = requests.get(DATA_URL, timeout=5)
@@ -60,7 +39,7 @@ def load_data_sync():
   return {'videos': [], 'articles': []}
 
 
-# ==================== ۳. کیبوردها ====================
+# ==================== ۳. چیدمان کیبوردها ====================
 def get_main_keyboard():
   keyboard = [
       [InlineKeyboardButton('📝 نقدها', callback_data='reviews_menu')],
@@ -101,7 +80,7 @@ def get_back_to_reviews_keyboard():
   return InlineKeyboardMarkup(keyboard)
 
 
-# ==================== ۴. هندلرهای دستورات و دکمه‌ها ====================
+# ==================== ۴. هندلرها ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
   welcome_text = (
       'سلام! به ربات رسمی کانال <b>ارتش سایه‌ها (Army of Shadows)</b> خوش'
@@ -127,7 +106,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           text='منوی اصلی ارتش سایه‌ها:', reply_markup=get_main_keyboard()
       )
 
-    # منوی لیست نقدها
+    # ورود به منوی لیست نقدها
     elif query.data == 'reviews_menu':
       text = (
           '📝 <b>بخش نقدها و تحلیل‌ها</b>\n\nلطفاً نقد مورد نظر خود را انتخاب'
@@ -137,7 +116,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           text=text, parse_mode='HTML', reply_markup=get_reviews_list_keyboard()
       )
 
-    # نقد اول: دکوپاژ (خلاصه + ویدیو + مقاله سایت)
+    # نقد اول: دکوپاژ (خلاصه + لینک یوتیوب + لینک وب‌سایت)
     elif query.data == 'review_decoupage':
       item = next(
           (a for a in articles if 'دکوپاژ' in a.get('title', '')),
@@ -171,7 +150,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
           disable_web_page_preview=True,
       )
 
-    # نقد دوم: آرکین و آواتار (خلاصه + ویدیو)
+    # نقد دوم: آرکین و آواتار (خلاصه + لینک یوتیوب)
     elif query.data == 'review_arcane_avatar':
       item = next(
           (
@@ -237,8 +216,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== ۵. اجرای اصلی ====================
 def main():
-  keep_alive()
-
   TOKEN = os.environ.get(
       'BOT_TOKEN', '8968244918:AAE3a3lD8qWkTs2YoTd-tiUVzn2wd7aytj4'
   )
@@ -247,7 +224,7 @@ def main():
   application.add_handler(CommandHandler('start', start))
   application.add_handler(CallbackQueryHandler(button_callback))
 
-  print('Bot starts polling cleanly...')
+  print('Pure Telegram Bot is running...')
   application.run_polling(drop_pending_updates=True)
 
 
